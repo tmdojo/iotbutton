@@ -42,11 +42,6 @@ const char* IFTTT_EVENT = "button_pressed"; // make sure to use the same event n
 const int BTN_PIN = 0; // GPIO0 is pull-up to 3.3v. Press BTN to GND.
 const int LED_PIN = 4;
 
-int buttonState;             // the current reading from the input pin
-int lastButtonState = LOW;   // the previous reading from the input pin
-long lastDebounceTime = 0;  // the last time the output pin was toggled
-long debounceDelay = 50;    // the debounce time; increase if the output flickers
-
 ESP8266WiFiMulti wifiMulti;
 bool connected = false;
 
@@ -65,24 +60,11 @@ void setup() {
 void loop() {
   if (check_wifi_connection() == false) return;
 
-  // check Button status with debounce
-  int reading = digitalRead(BTN_PIN);
-  if (reading != lastButtonState) {
-    // reset the debouncing timer
-    lastDebounceTime = millis();
+  // check Button status
+  if (!digitalRead(BTN_PIN)){
+    Serial.println("Button is pressed.");
+    trigger_ifttt();
   }
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    // stayed in the state for debounce time
-    if (reading != buttonState) {
-      // button state has changed:
-      buttonState = reading;
-      if (buttonState == LOW) {
-        Serial.println("Button is pressed.");
-        trigger_ifttt();
-      }
-    }
-  }
-  lastButtonState = reading;
 }
 
 void trigger_ifttt(){
