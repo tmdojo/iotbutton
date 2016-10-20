@@ -4,6 +4,9 @@ Make an internet connected physical button to trigger an event of your choice.
 
 ![Breadboard view](images/IMG_1644.JPG?raw=true "Title")
 
+[Check Wiki for instructions](wiki)
+
+
 Hardware used in the workshop:
 * ESP8266 (ESP-WROOM-02 module) x 1
 * Button x 2
