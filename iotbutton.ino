@@ -27,20 +27,31 @@ THE SOFTWARE.
 #include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
 
+#include "secret.h"
+
+/*
+secret.h defines following variables
+
 // Change to your key and event name
-const char* IFTTT_KEY = "your_ifttt_key";
-const char* IFTTT_EVENT = "button_pressed"; // make sure to use the same event name as in recipe
+const char* IFTTT_KEY = "ifttt_key";
+const char* IFTTT_EVENT = "ifttt_event";
 
 // AP at home so that you can use it at home
-#define WLAN_SSID_HOME "your_home_ssid"
-#define WLAN_PASS_HOME "your_home_pass"
+#define WLAN_SSID_HOME ""
+#define WLAN_PASS_HOME ""
 
 // AP at workshop location
-#define WLAN_SSID "workshop_ssid"
-#define WLAN_PASS "workshop_pass"
+#define WLAN_SSID ""
+#define WLAN_PASS ""
+*/
 
 const int BTN_PIN = 0; // GPIO0 is pull-up to 3.3v. Press BTN to GND.
 const int LED_PIN = 4;
+
+int buttonState;             // the current reading from the input pin
+int lastButtonState = LOW;   // the previous reading from the input pin
+long lastDebounceTime = 0;  // the last time the output pin was toggled
+long debounceDelay = 50;    // the debounce time; increase if the output flickers
 
 ESP8266WiFiMulti wifiMulti;
 bool connected = false;
@@ -60,11 +71,24 @@ void setup() {
 void loop() {
   if (check_wifi_connection() == false) return;
 
-  // check Button status
-  if (!digitalRead(BTN_PIN)){
-    Serial.println("Button is pressed.");
-    trigger_ifttt();
+  // check Button status with debounce
+  int reading = digitalRead(BTN_PIN);
+  if (reading != lastButtonState) {
+    // reset the debouncing timer
+    lastDebounceTime = millis();
   }
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    // stayed in the state for debounce time
+    if (reading != buttonState) {
+      // button state has changed:
+      buttonState = reading;
+      if (buttonState == LOW) {
+        Serial.println("Button is pressed.");
+        trigger_ifttt();
+      }
+    }
+  }
+  lastButtonState = reading;
 }
 
 void trigger_ifttt(){
@@ -94,9 +118,9 @@ void trigger_ifttt(){
 void light_success(){
   // flash LED slowly 5 times
   for (int i=0; i<5; i++){
-    digitalWrite(LED_PIN, HIGH);
-    delay(300);
     digitalWrite(LED_PIN, LOW);
+    delay(300);
+    digitalWrite(LED_PIN, HIGH);
     delay(300);
   }
 }
@@ -104,15 +128,16 @@ void light_success(){
 void light_fail(){
   // flash LED quickly 10 times
   for (int i=0; i<10; i++){
-    digitalWrite(LED_PIN, HIGH);
-    delay(100);
     digitalWrite(LED_PIN, LOW);
+    delay(100);
+    digitalWrite(LED_PIN, HIGH);
     delay(100);
   }
 }
 
 bool check_wifi_connection(){
   if (wifiMulti.run() != WL_CONNECTED) {
+    digitalWrite(LED_PIN, LOW);
     Serial.println("WiFi not connected!");
     connected = false;
     delay(1000);
@@ -120,6 +145,7 @@ bool check_wifi_connection(){
   } else {
     if (connected == false){
       // changed from not connected to connected
+      digitalWrite(LED_PIN, HIGH);
       connected = true;
       Serial.println("");
       Serial.println("WiFi connected");
